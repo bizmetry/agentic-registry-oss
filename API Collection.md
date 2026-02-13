@@ -4,7 +4,7 @@ This document provides **ready-to-run** API examples for Agentic Registry (local
 
 ## Base URLs
 
-- **Backend API:** `http://localhost:8080`
+- **Backend API:** `http://localhost:8080` 
 - **Frontend UI:** `http://localhost:3000` (login: `admin` / `admin`)
 
 ---
