@@ -1,0 +1,38 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: registry-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/registrydb
+    username: registry
+    password: registrypass
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+  resources:
+     static-locations: classpath:/META-INF/resources/, classpath:/resources/, classpath:/static/, classpath:/public/
+
+registry:
+  cors:
+    allowed-origins: "http://localhost:3000"
+  s3:
+    endpoint: "http://localhost:9000"
+    accessKey: "minioadmin"
+    secretKey: "minioadminpass"
+    bucket: "registry-artifacts"
+    region: "us-east-1"
+
+springdoc:
+  api-docs:
+    path: /v1/api/registry/api-docs
+    version: OPENAPI_3_1
+  swagger-ui:
+    path: /v1/api/registry/
+  packages-to-scan: com.bizmetry.registry.service

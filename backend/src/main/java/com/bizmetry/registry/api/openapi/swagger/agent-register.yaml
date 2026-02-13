@@ -1,0 +1,181 @@
+openapi: 3.0.3
+info:
+  title: Agent Registry API - Register Agent
+  description: API for registering a new agent in the registry.
+  version: 1.0.0
+tags:
+  - name: "Agent Management"
+    description: "Manage the agents in the registry"
+paths:
+  /v1/api/registry/agents/register:
+    post:
+      tags:
+        - "Agent Management"
+      summary: "Register a new agent"
+      description: "Register a new agent with the necessary information such as name, version, and discovery details."
+      requestBody:
+        description: "The agent registration details including name, description, version, and tools."
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentRegisterRequest"
+      responses:
+        '201':
+          description: "Agent registered successfully"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentSnapshotDTO"
+        '400':
+          description: "Bad request, invalid data"
+        '500':
+          description: "Internal server error"
+
+components:
+  schemas:
+    AgentRegisterRequest:
+      type: "object"
+      properties:
+        agentName:
+          type: "string"
+          description: "The name of the agent"
+        description:
+          type: "string"
+          description: "A brief description of the agent"
+        version:
+          type: "string"
+          description: "The version of the agent"
+        githubRepoUrl:
+          type: "string"
+          description: "The URL of the agent's GitHub repository"
+        discovery:
+          $ref: "#/components/schemas/Discovery"
+        llms:
+          type: "array"
+          items:
+            type: "string"
+          description: "List of LLMs (Large Language Models) associated with the agent"
+        tools:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Tool"
+          description: "List of tools associated with the agent"
+
+    Discovery:
+      type: "object"
+      properties:
+        url:
+          type: "string"
+          description: "The URL for agent discovery"
+        method:
+          type: "string"
+          description: "The HTTP method (e.g., GET, POST) for discovery"
+        queryParam:
+          type: "string"
+          description: "The query parameter to use for the discovery request"
+
+    Tool:
+      type: "object"
+      properties:
+        serverName:
+          type: "string"
+          description: "The name of the server hosting the tool"
+        toolName:
+          type: "string"
+          description: "The name of the tool"
+        serverVersion:
+          type: "string"
+          description: "The version of the server hosting the tool"
+
+    AgentSnapshotDTO:
+      type: "object"
+      properties:
+        agentId:
+          type: "string"
+          format: "uuid"
+          description: "Unique identifier for the agent"
+        name:
+          type: "string"
+          description: "Name of the agent"
+        description:
+          type: "string"
+          description: "Description of the agent"
+        version:
+          type: "string"
+          description: "Version of the agent"
+        githubRepoUrl:
+          type: "string"
+          description: "URL of the agent's GitHub repository"
+        createdTs:
+          type: "string"
+          format: "date-time"
+          description: "Timestamp when the agent was created"
+        updatedTs:
+          type: "string"
+          format: "date-time"
+          description: "Timestamp when the agent was last updated"
+        config:
+          $ref: "#/components/schemas/ConfigDTO"
+
+    ConfigDTO:
+      type: "object"
+      properties:
+        mcpServers:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/McpServerDTO"
+        llmInfo:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/LLMInfo"
+        discovery:
+          $ref: "#/components/schemas/Discovery"
+
+    McpServerDTO:
+      type: "object"
+      properties:
+        mcpServerId:
+          type: "string"
+          format: "uuid"
+        mcpServerName:
+          type: "string"
+        mcpServerVersion:
+          type: "string"
+        description:
+          type: "string"
+        version:
+          type: "string"
+        discoveryUrl:
+          type: "string"
+        repositoryUrl:
+          type: "string"
+        tools:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ToolDTO"
+
+    ToolDTO:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        description:
+          type: "string"
+        version:
+          type: "string"
+        arguments:
+          type: "object"
+          description: "Arguments for the tool"
+
+    LLMInfo:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        modelFamily:
+          type: "string"
+        modelName:
+          type: "string"
+    

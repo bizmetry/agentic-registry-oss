@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/registrydb}
+    username: ${SPRING_DATASOURCE_USERNAME:registry}
+    password: ${SPRING_DATASOURCE_PASSWORD:registrypass}
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+
+registry:
+  s3:
+    endpoint: "${REGISTRY_S3_ENDPOINT:http://minio:9000}"
+    accessKey: "${REGISTRY_S3_ACCESS_KEY:minioadmin}"
+    secretKey: "${REGISTRY_S3_SECRET_KEY:minioadminpass}"
+    bucket: "${REGISTRY_S3_BUCKET:registry-artifacts}"
+    region: "${REGISTRY_S3_REGION:us-east-1}"
+  cors:
+    allowed-origins: "${REGISTRY_CORS_ALLOWED_ORIGINS:http://localhost:3000}"

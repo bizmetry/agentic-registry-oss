@@ -1,0 +1,248 @@
+openapi: 3.0.3
+info:
+  title: Bizmetry Agent Registry API
+  version: 1.0.0
+  description: API for retrieving an agent snapshot (definition).
+
+tags:
+  - name: Agent Management
+    description: Manage agents in the registry
+
+paths:
+  /v1/api/registry/agents/{id}/definition:
+    get:
+      tags: [Agent Management]
+      summary: Get agent snapshot (definition)
+      description: >
+        Returns a snapshot (definition) of an ACTIVE agent, including discovery config,
+        associated LLMs, MCP servers and only the tools linked to the agent.
+      operationId: getAgentDefinition
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Agent ID (UUID).
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Agent snapshot returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentSnapshotDTO"
+              examples:
+                example:
+                  summary: Example snapshot
+                  value:
+                    agentId: "b7f5b5b8-3af0-4ce9-a9a0-0a6ef9a5c2d1"
+                    name: "Effibot Agent"
+                    description: "Agent that orchestrates Effibot flows"
+                    version: "1.0"
+                    githubRepoUrl: "https://github.com/org/effibot-agent"
+                    createdTs: "2026-02-11T17:40:12Z"
+                    updatedTs: "2026-02-11T17:55:48Z"
+                    config:
+                      discovery:
+                        method: "POST"
+                        protocol: "HTTPS"
+                        endpoint: "api.popgenai.globallogic.com/v1/api/agents/effibot"
+                        queryParam: "q"
+                      llmInfo:
+                        - id: "0f1d62f8-7c39-4a79-8f40-2b44c271c1b8"
+                          modelFamily: "OpenAI"
+                          modelName: "gpt-4o"
+                      mcpServers:
+                        - mcpServerId: "2a6b9a3a-0f8b-4f68-9e1b-9a3f7b7c2cc1"
+                          mcpServerName: "Effibot MCP"
+                          mcpServerVersion: "1.0"
+                          description: "MCP server exposing tools"
+                          version: "1.0"
+                          discoveryUrl: "https://api.example.com/mcp/discovery"
+                          repositoryUrl: "https://github.com/org/effibot-mcp"
+                          tools:
+                            - name: "createTicket"
+                              description: "Creates a ticket in the system"
+                              version: "1.0"
+                              arguments:
+                                type: object
+                                properties:
+                                  title:
+                                    type: string
+                                  priority:
+                                    type: string
+                                    enum: ["LOW","MEDIUM","HIGH"]
+                                required: ["title"]
+        "400":
+          description: Bad request (invalid UUID format, etc.).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Agent not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Agent is not active.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    AgentSnapshotDTO:
+      type: object
+      properties:
+        agentId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        version:
+          type: string
+          example: "1.0"
+        githubRepoUrl:
+          type: string
+          nullable: true
+        createdTs:
+          type: string
+          description: Timestamp serialized as string (Instant.toString()).
+          example: "2026-02-11T17:40:12Z"
+        updatedTs:
+          type: string
+          description: Timestamp serialized as string (Instant.toString()).
+          example: "2026-02-11T17:55:48Z"
+        config:
+          $ref: "#/components/schemas/AgentSnapshotConfigDTO"
+      required: [agentId, name, description, version, createdTs, updatedTs, config]
+      additionalProperties: false
+
+    AgentSnapshotConfigDTO:
+      type: object
+      properties:
+        mcpServers:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgentSnapshotMcpServerDTO"
+        llmInfo:
+          type: array
+          items:
+            $ref: "#/components/schemas/LLMInfo"
+        discovery:
+          $ref: "#/components/schemas/Discovery"
+      required: [mcpServers, llmInfo, discovery]
+      additionalProperties: false
+
+    AgentSnapshotMcpServerDTO:
+      type: object
+      properties:
+        mcpServerId:
+          type: string
+          format: uuid
+        mcpServerName:
+          type: string
+        mcpServerVersion:
+          type: string
+          example: "1.0"
+        description:
+          type: string
+          nullable: true
+        version:
+          type: string
+          nullable: true
+          description: Duplicate version field present in DTO.
+          example: "1.0"
+        discoveryUrl:
+          type: string
+          nullable: true
+        repositoryUrl:
+          type: string
+          nullable: true
+        tools:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgentSnapshotToolDTO"
+      required: [mcpServerId, mcpServerName, mcpServerVersion, tools]
+      additionalProperties: false
+
+    AgentSnapshotToolDTO:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        version:
+          type: string
+          nullable: true
+          example: "1.0"
+        arguments:
+          description: Tool arguments schema/content (JsonNode). Arbitrary JSON object.
+          type: object
+          additionalProperties: true
+      required: [name, arguments]
+      additionalProperties: false
+
+    LLMInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        modelFamily:
+          type: string
+          example: "OpenAI"
+        modelName:
+          type: string
+          example: "gpt-4o"
+      required: [id, modelFamily, modelName]
+      additionalProperties: false
+
+    Discovery:
+      type: object
+      properties:
+        method:
+          type: string
+          example: "POST"
+        protocol:
+          type: string
+          example: "HTTPS"
+        endpoint:
+          type: string
+          example: "api.popgenai.globallogic.com/v1/api/agents/effibot"
+        queryParam:
+          type: string
+          example: "q"
+      required: [method, protocol, endpoint, queryParam]
+      additionalProperties: false
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+      additionalProperties: false

@@ -1,0 +1,254 @@
+openapi: 3.0.3
+info:
+  title: Bizmetry Agent Registry API
+  version: 1.0.0
+  description: API for discovering agents with sorting, searching and filtering.
+
+tags:
+  - name: Agent Management
+    description: Manage agents in the registry
+
+paths:
+  /v1/api/registry/agents/discover:
+    post:
+      tags: [Agent Management]
+      summary: Discover agents
+      description: >
+        Discovers agents applying optional sorting, searching and filtering.
+        Note: current service implementation filters ACTIVE agents by default before applying sorting/search/filtering.
+      operationId: discoverAgents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentDiscoverRequest"
+            examples:
+              defaultSorting:
+                summary: Default sorting (name ASC)
+                value:
+                  sorting:
+                    sortField: name
+                    sortDirection: ASC
+              searchPartialInsensitive:
+                summary: Partial match search (case-insensitive, OR across terms)
+                value:
+                  searching:
+                    terms: ["effibot", "agentic"]
+                    type: partial_match
+                    sensitive: false
+              filterByStatusAndModel:
+                summary: Filter by status and model name
+                value:
+                  filtering:
+                    - field: status
+                      values: ["ACTIVE"]
+                    - field: model
+                      values: ["gpt-4o"]
+      responses:
+        "200":
+          description: List of agents (possibly empty).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgentDTO"
+        "400":
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    AgentDiscoverRequest:
+      type: object
+      properties:
+        sorting:
+          $ref: "#/components/schemas/AgentDiscoverSorting"
+        searching:
+          $ref: "#/components/schemas/AgentDiscoverSearching"
+        filtering:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgentDiscoverFiltering"
+      additionalProperties: false
+
+    AgentDiscoverSorting:
+      type: object
+      description: Sorting configuration. If omitted, backend defaults to name ASC.
+      properties:
+        sortDirection:
+          type: string
+          description: Sort direction.
+          enum: [ASC, DESC, asc, desc]
+          example: ASC
+        sortField:
+          type: string
+          description: Supported fields are "name" and "timestamp".
+          enum: [name, timestamp, NAME, TIMESTAMP]
+          example: name
+      additionalProperties: false
+
+    AgentDiscoverSearching:
+      type: object
+      description: Searching configuration. OR across terms.
+      properties:
+        terms:
+          type: array
+          items:
+            type: string
+          description: Search terms.
+          example: ["effibot", "agentic"]
+        type:
+          type: string
+          description: Match type.
+          enum: [exact_match, partial_match]
+          example: partial_match
+        sensitive:
+          type: boolean
+          description: Case sensitive search.
+          example: false
+      additionalProperties: false
+
+    AgentDiscoverFiltering:
+      type: object
+      description: >
+        Filtering configuration. Supported fields in current backend: name, model, status.
+        For "model", backend checks metadata.llms[*].modelName.
+      properties:
+        field:
+          type: string
+          example: status
+        values:
+          type: array
+          items:
+            type: string
+          example: ["ACTIVE"]
+      required: [field, values]
+      additionalProperties: false
+
+    AgentDTO:
+      type: object
+      properties:
+        agentId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        version:
+          type: string
+          example: "1.0"
+        githubRepoUrl:
+          type: string
+          nullable: true
+          example: "https://github.com/org/repo"
+        metadata:
+          $ref: "#/components/schemas/MetadataDTO"
+        createdTs:
+          type: string
+          format: date-time
+        updatedTs:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/AgentStatus"
+      required: [agentId, name, description, version, createdTs, updatedTs, status]
+      additionalProperties: false
+
+    MetadataDTO:
+      type: object
+      properties:
+        llms:
+          type: array
+          items:
+            $ref: "#/components/schemas/LLMInfo"
+        tools:
+          type: array
+          items:
+            $ref: "#/components/schemas/McpTool"
+        discovery:
+          $ref: "#/components/schemas/Discovery"
+      additionalProperties: false
+
+    LLMInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        modelFamily:
+          type: string
+          example: "OpenAI"
+        modelName:
+          type: string
+          example: "gpt-4o"
+      required: [id, modelFamily, modelName]
+      additionalProperties: false
+
+    McpTool:
+      type: object
+      properties:
+        mcpServerId:
+          type: string
+          format: uuid
+        toolName:
+          type: string
+        mcpServerName:
+          type: string
+          nullable: true
+        mcpServerVersion:
+          type: string
+          nullable: true
+          example: "1.0"
+      required: [mcpServerId, toolName]
+      additionalProperties: false
+
+    Discovery:
+      type: object
+      properties:
+        method:
+          type: string
+          example: "POST"
+        protocol:
+          type: string
+          example: "HTTPS"
+        endpoint:
+          type: string
+          example: "api.popgenai.globallogic.com/v1/api/agent"
+        queryParam:
+          type: string
+          example: "q"
+      required: [method, protocol, endpoint, queryParam]
+      additionalProperties: false
+
+    AgentStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE]
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+      additionalProperties: false

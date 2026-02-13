@@ -1,0 +1,130 @@
+openapi: 3.0.3
+info:
+  title: Bizmetry MCP Server Registry API
+  version: 1.0.0
+  description: API for registering or updating MCP Servers in the registry.
+
+tags:
+  - name: MCP Server Management
+    description: Manage MCP Servers in the registry
+
+paths:
+  /v1/api/registry/mcp-servers/register:
+    post:
+      tags: [MCP Server Management]
+      summary: Register or update MCP Server
+      description: >
+        Registers a new MCP Server in the registry.
+        If a server with the same name and version already exists,
+        it will be updated instead of created.
+      operationId: registerMcpServer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/McpServerRegisterRequest"
+            examples:
+              createExample:
+                summary: Create new MCP Server
+                value:
+                  name: "Effibot MCP"
+                  version: "1.0"
+                  description: "MCP Server exposing Effibot tools"
+                  discoveryUrl: "https://api.example.com/mcp/discovery"
+                  repositoryUrl: "https://github.com/org/effibot-mcp"
+              updateExample:
+                summary: Update existing MCP Server
+                value:
+                  name: "Effibot MCP"
+                  version: "1.0"
+                  description: "Updated description"
+                  discoveryUrl: "https://api.example.com/mcp/discovery"
+                  repositoryUrl: "https://github.com/org/effibot-mcp"
+      responses:
+        "200":
+          description: MCP Server registered or updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/McpServerRegisterResponse"
+        "400":
+          description: Validation error (missing required fields or invalid format).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+
+    McpServerRegisterRequest:
+      type: object
+      required:
+        - name
+        - version
+        - discoveryUrl
+      properties:
+        name:
+          type: string
+          description: Name of the MCP Server.
+          example: "Effibot MCP"
+        version:
+          type: string
+          description: Version of the MCP Server (format x.y or x.y.z).
+          example: "1.0"
+        description:
+          type: string
+          description: Optional description of the MCP Server.
+          example: "MCP Server exposing Effibot tools"
+        discoveryUrl:
+          type: string
+          description: URL used for MCP discovery.
+          example: "https://api.example.com/mcp/discovery"
+        repositoryUrl:
+          type: string
+          description: Optional Git repository URL.
+          example: "https://github.com/org/effibot-mcp"
+      additionalProperties: false
+
+    McpServerRegisterResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the MCP Server.
+        name:
+          type: string
+          description: Name of the MCP Server.
+        version:
+          type: string
+          description: Version of the MCP Server.
+      required:
+        - id
+        - name
+        - version
+      additionalProperties: false
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+      additionalProperties: false

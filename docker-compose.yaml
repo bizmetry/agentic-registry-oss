@@ -1,0 +1,104 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: registry-postgres
+    environment:
+      POSTGRES_DB: registrydb
+      POSTGRES_USER: registry
+      POSTGRES_PASSWORD: registrypass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U registry -d registrydb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    container_name: registry-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadminpass
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # (Opcional pero recomendado) crea bucket al inicio
+  minio-init:
+    image: minio/mc:latest
+    container_name: registry-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadminpass;
+      mc mb -p local/registry-artifacts || true;
+      mc anonymous set download local/registry-artifacts || true;
+      exit 0;
+      "
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: registry-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/registrydb
+      SPRING_DATASOURCE_USERNAME: registry
+      SPRING_DATASOURCE_PASSWORD: registrypass
+
+      # JPA (ajustable)
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+
+      # MinIO (S3)
+      REGISTRY_S3_ENDPOINT: http://minio:9000
+      REGISTRY_S3_ACCESS_KEY: minioadmin
+      REGISTRY_S3_SECRET_KEY: minioadminpass
+      REGISTRY_S3_BUCKET: registry-artifacts
+      REGISTRY_S3_REGION: us-east-1
+
+      # CORS básico (si lo querés desde env)
+      REGISTRY_CORS_ALLOWED_ORIGINS: http://localhost:3000
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Para React build-time (CRA/Vite)
+        REACT_APP_API_BASE_URL: http://localhost:8080
+    container_name: registry-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  pg_data:
+  minio_data:
+
